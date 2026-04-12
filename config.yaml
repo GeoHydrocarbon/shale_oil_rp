@@ -1,0 +1,107 @@
+paths: # 文件路径配置
+  rockphypy_repo: rockphypy-main # rockphypy 源码目录
+  input_file: rockphypy-main/data/Jorlin/NY1_4HF_岩石物理.xlsx # 原始输入数据文件
+  output_preprocessed: rockphypy-main/data/Jorlin/jorlin_preprocessed.xlsx # 前处理结果输出文件
+  output_modeled: rockphypy-main/data/Jorlin/jorlin_modeled.xlsx # 岩石物理建模结果输出文件
+  sheet_name: Sheet1 # Excel 工作表名称
+
+columns: # 原始数据列名映射
+  depth: Depth # 深度列
+  dtp: DTC # 纵波时差列
+  dts: DTS # 横波时差列
+  density: DEN # 体积密度列
+  porosity: POR # 孔隙度列
+  water_saturation: SW # 含水饱和度列
+  toc: TOC # 总有机碳列
+  oil_indicator: VOILT # 含油指示列，当前仅保留未参与建模
+  minerals: # 矿物质量分数列名映射
+    DOLM: DOLM # 白云石质量分数列
+    LIME: LIME # 方解石质量分数列
+    QUAZ: QUAZ # 石英质量分数列
+    ILLITE: ILLITE # 伊利石质量分数列
+    PYRITE: PYRITE # 黄铁矿质量分数列
+
+units: # 输入数据单位配置
+  depth: m # 深度单位
+  dtp: us/ft # 纵波时差单位
+  dts: us/ft # 横波时差单位
+  density: g/cm3 # 密度单位
+  porosity: fraction # 孔隙度单位，fraction 表示小数
+  water_saturation: fraction # 含水饱和度单位，fraction 表示小数
+  toc: fraction # TOC 单位，fraction 表示小数
+  mineral_fractions: fraction # 矿物组成单位，fraction 表示小数质量分数
+
+minerals: # 矿物物性参数
+  DOLM: # 白云石参数
+    density: 2.87 # 密度，g/cm3
+    K: 94.9 # 体积模量，GPa
+    G: 45.0 # 剪切模量，GPa
+  LIME: # 方解石参数
+    density: 2.71 # 密度，g/cm3
+    K: 76.8 # 体积模量，GPa
+    G: 32.0 # 剪切模量，GPa
+  QUAZ: # 石英参数
+    density: 2.65 # 密度，g/cm3
+    K: 37.0 # 体积模量，GPa
+    G: 44.0 # 剪切模量，GPa
+  ILLITE: # 伊利石参数
+    density: 2.60 # 密度，g/cm3
+    K: 21.0 # 体积模量，GPa
+    G: 7.0 # 剪切模量，GPa
+  PYRITE: # 黄铁矿参数
+    density: 4.93 # 密度，g/cm3
+    K: 147.4 # 体积模量，GPa
+    G: 132.5 # 剪切模量，GPa
+
+kerogen: # 干酪根固相参数
+  enabled: true # 是否把 TOC 转换为干酪根固相并参与基质建模
+  carbon_fraction: 0.75 # 干酪根中的碳质量分数，用于 TOC 转换
+  density: 1.25 # 干酪根密度，g/cm3
+  K: 5.0 # 干酪根体积模量，GPa
+  G: 3.0 # 干酪根剪切模量，GPa
+  max_mass_fraction: 0.30 # 干酪根质量分数上限，用于约束异常值
+
+preprocess: # 前处理开关
+  clip_negative: true # 是否把负值截断为 0
+  normalize_minerals: true # 是否对矿物质量分数重新归一化
+  convert_weight_to_volume: true # 是否执行质量分数到体积分数转换，当前流程默认启用
+  compute_log_moduli: true # 是否由测井速度和密度反算 K_log/G_log
+  drop_invalid_rows: false # 是否删除无效样本行，false 表示保留并打标记
+
+model: # 岩石物理模型配置
+  matrix_mixing: hill # 基质矿物混合方式，可选 voigt/reuss/hill
+  dry_frame_model: DEM # 干岩骨架模型，可选 DEM/cripor
+  critical_porosity: 0.2 # 临界孔隙度，仅在 cripor 模型时使用
+  pore_aspect_ratio: 0.08 # 单孔隙 DEM 的默认孔隙长宽比，双孔隙模式下仅作备用
+  fluid_mixing: reuss # 油水混合流体体积模量混合方式，当前支持 reuss
+  use_fracture: false # 是否启用裂缝模块，当前关闭
+
+
+pore_system: # 孔隙体系参数
+  model: dual_pore # 孔隙体系模型，当前为硬孔+软孔双孔隙
+  soft_pore_fraction: 0.35 # 总孔隙度中软孔占比
+  alpha_hard: 0.15 # 硬孔纵横比
+  alpha_soft: 0.01 # 软孔纵横比
+  dem_order: hard_then_soft # DEM 加孔顺序，可选 hard_then_soft/soft_then_hard
+
+fluid: # 孔隙流体参数
+  system: oil_water # 流体体系，当前为油水两相
+  pressure_mpa: 35.0 # 地层压力，MPa
+  temperature_c: 110.0 # 地层温度，摄氏度
+  brine_salinity_ppm: 80000.0 # 地层水矿化度，ppm
+  oil_density_gcc: 0.82 # 地层原油密度，g/cm3
+  gas_gravity: 0.80 # 天然气相对密度，用于活油情况
+  gas_oil_ratio_l_l: 0.0 # 气油比，L/L，0 表示按死油处理
+
+plots: # 绘图配置
+  enabled: true # 是否在主程序运行后自动绘图
+  output_dir: rockphypy-main/data/Jorlin/figures # 图片输出目录
+  velocity_depth_filename: velocity_depth_panel.png # 速度与误差深度综合图文件名
+  dpi: 300 # 图片分辨率
+  figure_width: 20 # 画布宽度，英寸
+  figure_height: 12 # 画布高度，英寸
+  axis_label_fontsize: 16 # 坐标轴标题字号
+  tick_label_fontsize: 14 # 坐标轴刻度字号
+  title_fontsize: 18 # 子图标题字号
+  legend_fontsize: 13 # 图例字号
+  line_width: 1.8 # 曲线线宽
