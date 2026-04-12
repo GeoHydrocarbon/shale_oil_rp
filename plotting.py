@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from preprocess import resolve_path
+from preprocess_v2 import resolve_path
 
 
 def _configure_matplotlib(base_dir: Path):
@@ -34,6 +34,7 @@ def plot_velocity_depth_panel(frame: pd.DataFrame, config: dict, base_dir: Path)
     plot_data = frame.loc[frame["compare_valid"]].copy()
     if plot_data.empty:
         raise ValueError("No valid rows available for plotting.")
+    plot_data = plot_data.sort_values("depth_m", kind="mergesort")
 
     # 第二步：解析绘图参数和输出路径。
     output_dir = resolve_path(base_dir, plots_cfg["output_dir"])
@@ -80,8 +81,8 @@ def plot_velocity_depth_panel(frame: pd.DataFrame, config: dict, base_dir: Path)
     axes[3].legend(fontsize=legend_fontsize)
 
     # 第四步：统一设置深度方向、刻度字号和网格样式。
+    axes[0].set_ylim(float(depth.max()), float(depth.min()))
     for ax in axes:
-        ax.invert_yaxis()
         ax.grid(True, linestyle="--", alpha=0.4)
         ax.tick_params(axis="both", labelsize=tick_label_fontsize)
 

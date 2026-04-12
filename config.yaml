@@ -1,4 +1,4 @@
-paths: # 文件路径配置
+﻿paths: # 文件路径配置
   rockphypy_repo: rockphypy-main # rockphypy 源码目录
   input_file: rockphypy-main/data/Jorlin/NY1_4HF_岩石物理.xlsx # 原始输入数据文件
   output_preprocessed: rockphypy-main/data/Jorlin/jorlin_preprocessed.xlsx # 前处理结果输出文件
@@ -31,7 +31,7 @@ units: # 输入数据单位配置
   toc: fraction # TOC 单位，fraction 表示小数
   mineral_fractions: fraction # 矿物组成单位，fraction 表示小数质量分数
 
-minerals: # 矿物物性参数
+minerals: # 无机矿物物性参数
   DOLM: # 白云石参数
     density: 2.87 # 密度，g/cm3
     K: 94.9 # 体积模量，GPa
@@ -64,24 +64,23 @@ kerogen: # 干酪根固相参数
 preprocess: # 前处理开关
   clip_negative: true # 是否把负值截断为 0
   normalize_minerals: true # 是否对矿物质量分数重新归一化
-  convert_weight_to_volume: true # 是否执行质量分数到体积分数转换，当前流程默认启用
-  compute_log_moduli: true # 是否由测井速度和密度反算 K_log/G_log
+  convert_weight_to_volume: true # 是否执行质量分数到体积分数转换
+  compute_log_moduli: true # 是否由实测速度和密度反算 K_log/G_log
   drop_invalid_rows: false # 是否删除无效样本行，false 表示保留并打标记
 
 model: # 岩石物理模型配置
-  matrix_mixing: hill # 基质矿物混合方式，可选 voigt/reuss/hill
+  matrix_mixing: hill # 基质混合方式，可选 voigt/reuss/hill
   dry_frame_model: DEM # 干岩骨架模型，可选 DEM/cripor
-  critical_porosity: 0.2 # 临界孔隙度，仅在 cripor 模型时使用
-  pore_aspect_ratio: 0.08 # 单孔隙 DEM 的默认孔隙长宽比，双孔隙模式下仅作备用
+  critical_porosity: 0.20 # 临界孔隙度，仅在 cripor 模型中直接使用
+  pore_aspect_ratio: 0.08 # 单孔隙 DEM 的默认孔隙纵横比，双孔模式下仅作备用
   fluid_mixing: reuss # 油水混合流体体积模量混合方式，当前支持 reuss
-  use_fracture: false # 是否启用裂缝模块，当前关闭
-
+  use_fracture: false # 基线建模模块暂不直接使用，裂缝正演由 fracture 配置块单独控制
 
 pore_system: # 孔隙体系参数
   model: dual_pore # 孔隙体系模型，当前为硬孔+软孔双孔隙
-  soft_pore_fraction: 0.35 # 总孔隙度中软孔占比
+  soft_pore_fraction: 0.25  # 总孔隙度中软孔占比
   alpha_hard: 0.15 # 硬孔纵横比
-  alpha_soft: 0.01 # 软孔纵横比
+  alpha_soft: 0.02 # 软孔纵横比
   dem_order: hard_then_soft # DEM 加孔顺序，可选 hard_then_soft/soft_then_hard
 
 fluid: # 孔隙流体参数
@@ -93,11 +92,67 @@ fluid: # 孔隙流体参数
   gas_gravity: 0.80 # 天然气相对密度，用于活油情况
   gas_oil_ratio_l_l: 0.0 # 气油比，L/L，0 表示按死油处理
 
-plots: # 绘图配置
+fracture: # 裂缝正演与敏感性分析配置
+  enabled: true # 是否启用裂缝密度-倾角正演分析
+  run_forward_model: true # 是否输出一版基准裂缝正演结果表
+  run_sensitivity_analysis: false # 是否执行裂缝密度-倾角敏感性分析
+  model: hudson_cone # 裂缝模型，当前使用 Hudson cone 近似倾角效应
+  host_domain: saturated_background # 裂缝加载的背景介质，可选 saturated_background/dry_background
+  fill: fluid # 裂缝充填类型，可选 fluid/dry
+  aspect_ratio: 0.01 # 裂缝纵横比
+  density: 0.01 # 基准裂缝密度，用于输出一版参考结果
+  dip_angle_deg: 60.0 # 基准裂缝倾角，度
+  log_incidence_deg: 0.0 # 测井传播方向相对 TI 轴的传播角，0 表示近似垂直传播
+  output_reference: rockphypy-main/data/Jorlin/jorlin_fracture_reference.xlsx # 基准裂缝场景结果表
+  output_table: rockphypy-main/data/Jorlin/fracture_sensitivity.xlsx # 裂缝敏感性分析结果表
+  output_dir: rockphypy-main/data/Jorlin/figures/fracture # 裂缝图件输出目录
+  grid_figure_filename: fracture_density_dip_heatmap.png # 裂缝密度-倾角热图文件名
+  density_grid: [0.00, 0.01, 0.02, 0.03, 0.05, 0.08, 0.10] # 裂缝密度扫描范围
+  dip_grid_deg: [0, 15, 30, 45, 60, 75, 90] # 裂缝倾角扫描范围，度
+  grid_metrics: # 需要输出热图的误差指标
+    - composite_score # 综合评分热图
+    - vp_rmse # 纵波均方根误差热图
+    - vs_rmse # 横波均方根误差热图
+  score_weights: # 裂缝综合评分权重
+    vp_rmse: 1.0 # 纵波均方根误差权重
+    vs_rmse: 1.0 # 横波均方根误差权重
+    vp_bias: 0.5 # 纵波平均偏差权重
+    vs_bias: 0.5 # 横波平均偏差权重
+  dpi: 300 # 裂缝热图分辨率
+  figure_width: 16 # 裂缝热图宽度，英寸
+  figure_height: 10 # 裂缝热图高度，英寸
+  axis_label_fontsize: 14 # 裂缝热图坐标轴标题字号
+  tick_label_fontsize: 12 # 裂缝热图坐标轴刻度字号
+  title_fontsize: 16 # 裂缝热图标题字号
+  inversion: # 裂缝密度和倾角联合反演配置
+    enabled: true # 是否启用裂缝联合反演
+    mode: joint_density_dip_path # 反演模式，当前为带路径平滑约束的联合反演
+    density_grid: [0.00, 0.005, 0.01, 0.02, 0.03, 0.05, 0.08] # 裂缝密度候选值
+    dip_grid_deg: [60, 65, 70, 75, 80, 85, 90] # 允许搜索的裂缝倾角候选值，避免出现离谱倾角
+    vp_weight: 1.0 # Vp 误差权重
+    vs_weight: 1.0 # Vs 误差权重
+    use_relative_error: true # 是否对速度误差使用相对误差形式
+    smooth_lambda_density: 2.0 # 裂缝密度路径平滑权重
+    smooth_lambda_dip: 5.0 # 裂缝倾角路径平滑权重
+    max_density_change: 0.03 # 相邻深度裂缝密度允许的最大跳变
+    max_dip_change_deg: 10.0 # 相邻深度裂缝倾角允许的最大跳变，度
+    output_file: rockphypy-main/data/Jorlin/jorlin_fracture_inversion.xlsx # 裂缝联合反演结果表
+    output_figure: rockphypy-main/data/Jorlin/figures/fracture/fracture_inversion_panel.png # 裂缝联合反演深度综合图
+    output_velocity_panel: rockphypy-main/data/Jorlin/figures/fracture/fracture_velocity_depth_panel.png # 裂缝反演后的速度与误差四联深度图
+    dpi: 300 # 裂缝反演图分辨率
+    figure_width: 20 # 裂缝反演图宽度，英寸
+    figure_height: 12 # 裂缝反演图高度，英寸
+    axis_label_fontsize: 16 # 裂缝反演图坐标轴标题字号
+    tick_label_fontsize: 14 # 裂缝反演图坐标轴刻度字号
+    title_fontsize: 18 # 裂缝反演图标题字号
+    legend_fontsize: 13 # 裂缝反演图图例字号
+    line_width: 1.8 # 裂缝反演图线宽
+
+plots: # 深度综合图绘图配置
   enabled: true # 是否在主程序运行后自动绘图
-  output_dir: rockphypy-main/data/Jorlin/figures # 图片输出目录
+  output_dir: rockphypy-main/data/Jorlin/figures # 图件输出目录
   velocity_depth_filename: velocity_depth_panel.png # 速度与误差深度综合图文件名
-  dpi: 300 # 图片分辨率
+  dpi: 300 # 图件分辨率
   figure_width: 20 # 画布宽度，英寸
   figure_height: 12 # 画布高度，英寸
   axis_label_fontsize: 16 # 坐标轴标题字号
@@ -105,3 +160,62 @@ plots: # 绘图配置
   title_fontsize: 18 # 子图标题字号
   legend_fontsize: 13 # 图例字号
   line_width: 1.8 # 曲线线宽
+
+crossplots: # 交会图绘图配置
+  enabled: true # 是否在裂缝反演后自动生成交会图
+  elastic_source: fracture_inv # 交会图采用的弹性参数来源，可选 fracture_inv/log
+  output_dir: rockphypy-main/data/Jorlin/figures/crossplots # 交会图输出目录
+  panel_filename: shale_oil_crossplots_panel.png # 推荐 8 张交会图总面板文件名
+  dpi: 300 # 交会图分辨率
+  figure_width: 28 # 交会图总面板宽度，英寸
+  figure_height: 12 # 交会图总面板高度，英寸
+  axis_label_fontsize: 14 # 交会图坐标轴标题字号
+  tick_label_fontsize: 12 # 交会图坐标轴刻度字号
+  title_fontsize: 16 # 交会图标题字号
+  point_size: 18 # 散点大小
+  point_alpha: 0.85 # 散点透明度
+  colormap: turbo # 交会图颜色映射
+
+sensitivity: # 参数敏感性分析配置
+  enabled: false # 是否在基线建模后执行参数敏感性分析
+  output_table: rockphypy-main/data/Jorlin/sensitivity_summary.xlsx # 敏感性分析结果表输出路径
+  output_dir: rockphypy-main/data/Jorlin/figures/sensitivity # 敏感性图件输出目录
+  dpi: 300 # 敏感性图分辨率
+  figure_width: 16 # 敏感性图画布宽度，英寸
+  figure_height: 10 # 敏感性图画布高度，英寸
+  axis_label_fontsize: 14 # 敏感性图坐标轴标题字号
+  tick_label_fontsize: 12 # 敏感性图坐标轴刻度字号
+  title_fontsize: 16 # 敏感性图标题字号
+  line_width: 1.8 # 敏感性曲线线宽
+  marker_size: 6 # 敏感性曲线标记点大小
+  score_weights: # 综合评分权重，bias 类指标会自动按绝对值参与评分
+    vp_rmse: 1.0 # 纵波均方根误差权重
+    vs_rmse: 1.0 # 横波均方根误差权重
+    rho_rmse: 0.5 # 密度均方根误差权重
+    vp_bias: 0.5 # 纵波平均偏差权重
+    vs_bias: 0.5 # 横波平均偏差权重
+  metrics: # 统一输出的误差指标
+    - vp_rmse # 纵波速度均方根误差
+    - vs_rmse # 横波速度均方根误差
+    - vp_bias # 纵波速度平均偏差
+    - vs_bias # 横波速度平均偏差
+    - rho_rmse # 密度均方根误差
+  parameters: # 待扫描的参数及取值列表
+    kerogen.carbon_fraction: [0.65, 0.70, 0.75, 0.80, 0.85] # 干酪根碳质量分数扫描
+    kerogen.K: [3.0, 5.0, 7.0, 9.0] # 干酪根体积模量扫描
+    kerogen.G: [1.5, 3.0, 4.5, 6.0] # 干酪根剪切模量扫描
+    pore_system.soft_pore_fraction: [0.15, 0.25, 0.35, 0.45, 0.55] # 软孔占比扫描
+    pore_system.alpha_soft: [0.005, 0.01, 0.02, 0.04] # 软孔纵横比扫描
+    pore_system.alpha_hard: [0.10, 0.15, 0.20, 0.25] # 硬孔纵横比扫描
+  two_parameter_grid: # 二维网格敏感性分析配置
+    enabled: true # 是否执行双参数网格扫描
+    x_parameter: pore_system.soft_pore_fraction # 横轴参数
+    y_parameter: pore_system.alpha_soft # 纵轴参数
+    x_values: [0.10, 0.15, 0.20, 0.25, 0.30] # 横轴参数扫描值
+    y_values: [0.005, 0.01, 0.02, 0.04] # 纵轴参数扫描值
+    metrics: # 需要绘制热图的指标
+      - composite_score # 综合评分热图
+      - vp_rmse # 纵波均方根误差热图
+      - vs_rmse # 横波均方根误差热图
+    figure_width: 16 # 二维热图宽度，英寸
+    figure_height: 10 # 二维热图高度，英寸
