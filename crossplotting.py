@@ -83,6 +83,67 @@ def build_crossplot_frame(frame: pd.DataFrame, config: dict) -> pd.DataFrame:
     return working.loc[working["crossplot_valid"]].copy()
 
 
+def _panel_style(crossplot_cfg: dict) -> dict[str, float | str]:
+    return {
+        "figure_width": float(crossplot_cfg.get("figure_width", 28)),
+        "figure_height": float(crossplot_cfg.get("figure_height", 12)),
+        "dpi": int(crossplot_cfg.get("dpi", 300)),
+        "axis_label_fontsize": float(crossplot_cfg.get("axis_label_fontsize", 14)),
+        "tick_label_fontsize": float(crossplot_cfg.get("tick_label_fontsize", 12)),
+        "title_fontsize": float(crossplot_cfg.get("title_fontsize", 16)),
+        "point_size": float(crossplot_cfg.get("point_size", 18)),
+        "point_alpha": float(crossplot_cfg.get("point_alpha", 0.85)),
+        "cmap": str(crossplot_cfg.get("colormap", "turbo")),
+    }
+
+
+def _scatter_panel(
+    plot_data: pd.DataFrame,
+    specs: list[tuple[str, str, str, str, str, str]],
+    output_path: Path,
+    base_dir: Path,
+    crossplot_cfg: dict,
+    nrows: int,
+    ncols: int,
+) -> Path:
+    plt = _configure_matplotlib(base_dir)
+    style = _panel_style(crossplot_cfg)
+
+    fig, axes = plt.subplots(
+        nrows,
+        ncols,
+        figsize=(style["figure_width"], style["figure_height"]),
+        constrained_layout=True,
+    )
+    axes = np.atleast_1d(axes).ravel()
+
+    for axis, (x_col, y_col, color_col, title, xlabel, ylabel) in zip(axes, specs):
+        scatter = axis.scatter(
+            plot_data[x_col],
+            plot_data[y_col],
+            c=plot_data[color_col],
+            s=style["point_size"],
+            alpha=style["point_alpha"],
+            cmap=style["cmap"],
+            edgecolors="none",
+        )
+        axis.set_title(title, fontsize=style["title_fontsize"])
+        axis.set_xlabel(xlabel, fontsize=style["axis_label_fontsize"])
+        axis.set_ylabel(ylabel, fontsize=style["axis_label_fontsize"])
+        axis.grid(True, linestyle="--", alpha=0.35)
+        axis.tick_params(axis="both", labelsize=style["tick_label_fontsize"])
+        colorbar = fig.colorbar(scatter, ax=axis, shrink=0.9)
+        colorbar.ax.tick_params(labelsize=style["tick_label_fontsize"])
+        colorbar.set_label(color_col, fontsize=style["axis_label_fontsize"] - 1)
+
+    for axis in axes[len(specs) :]:
+        axis.set_visible(False)
+
+    fig.savefig(output_path, dpi=style["dpi"], bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def plot_crossplots(frame: pd.DataFrame, config: dict, base_dir: Path) -> Path | None:
     crossplot_cfg = config.get("crossplots", {})
     if not crossplot_cfg.get("enabled", False):
@@ -92,20 +153,9 @@ def plot_crossplots(frame: pd.DataFrame, config: dict, base_dir: Path) -> Path |
     if plot_data.empty:
         raise ValueError("No valid rows available for crossplotting.")
 
-    plt = _configure_matplotlib(base_dir)
     output_dir = resolve_path(base_dir, crossplot_cfg["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / crossplot_cfg["panel_filename"]
-
-    figure_width = float(crossplot_cfg.get("figure_width", 28))
-    figure_height = float(crossplot_cfg.get("figure_height", 12))
-    dpi = int(crossplot_cfg.get("dpi", 300))
-    axis_label_fontsize = float(crossplot_cfg.get("axis_label_fontsize", 14))
-    tick_label_fontsize = float(crossplot_cfg.get("tick_label_fontsize", 12))
-    title_fontsize = float(crossplot_cfg.get("title_fontsize", 16))
-    point_size = float(crossplot_cfg.get("point_size", 18))
-    point_alpha = float(crossplot_cfg.get("point_alpha", 0.85))
-    cmap = str(crossplot_cfg.get("colormap", "turbo"))
 
     specs = [
         ("phi", "ai_crossplot", "so", "AI vs Phi", "Porosity", "Acoustic Impedance"),
@@ -117,31 +167,31 @@ def plot_crossplots(frame: pd.DataFrame, config: dict, base_dir: Path) -> Path |
         ("toc_clean", "fracture_density_inv", "brittle_vol", "TOC vs Fracture Density", "TOC", "Fracture Density"),
         ("poisson_crossplot", "young_crossplot_gpa", "fracture_density_inv", "E vs Poisson", "Poisson's Ratio", "Young's Modulus (GPa)"),
     ]
-
-    fig, axes = plt.subplots(2, 4, figsize=(figure_width, figure_height), constrained_layout=True)
-    axes = axes.ravel()
-
     # 第一步：围绕储集性、含油性、裂缝和脆性四类因素绘制推荐的 8 张交会图。
-    for axis, (x_col, y_col, color_col, title, xlabel, ylabel) in zip(axes, specs):
-        scatter = axis.scatter(
-            plot_data[x_col],
-            plot_data[y_col],
-            c=plot_data[color_col],
-            s=point_size,
-            alpha=point_alpha,
-            cmap=cmap,
-            edgecolors="none",
-        )
-        axis.set_title(title, fontsize=title_fontsize)
-        axis.set_xlabel(xlabel, fontsize=axis_label_fontsize)
-        axis.set_ylabel(ylabel, fontsize=axis_label_fontsize)
-        axis.grid(True, linestyle="--", alpha=0.35)
-        axis.tick_params(axis="both", labelsize=tick_label_fontsize)
-        colorbar = fig.colorbar(scatter, ax=axis, shrink=0.9)
-        colorbar.ax.tick_params(labelsize=tick_label_fontsize)
-        colorbar.set_label(color_col, fontsize=axis_label_fontsize - 1)
+    return _scatter_panel(plot_data, specs, output_path, base_dir, crossplot_cfg, nrows=2, ncols=4)
 
-    # 第二步：保存交会图总面板，便于和论文中的物性-弹性解释图直接对照。
-    fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
-    plt.close(fig)
-    return output_path
+
+def plot_shale_feature_crossplots(frame: pd.DataFrame, config: dict, base_dir: Path) -> Path | None:
+    crossplot_cfg = config.get("crossplots", {})
+    if not crossplot_cfg.get("enabled", False):
+        return None
+
+    plot_data = build_crossplot_frame(frame, config)
+    if plot_data.empty:
+        raise ValueError("No valid rows available for shale feature crossplotting.")
+
+    output_dir = resolve_path(base_dir, crossplot_cfg["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / crossplot_cfg["shale_feature_panel_filename"]
+
+    specs = [
+        ("toc_clean", "phi", "so", "TOC vs Phi", "TOC", "Porosity"),
+        ("toc_clean", "ai_crossplot", "fracture_density_inv", "TOC vs AI", "TOC", "Acoustic Impedance"),
+        ("toc_clean", "vpvs_crossplot", "phi", "TOC vs Vp/Vs", "TOC", "Vp/Vs"),
+        ("KEROGEN_vol", "ai_crossplot", "so", "Kerogen vs AI", "Kerogen Volume", "Acoustic Impedance"),
+        ("KEROGEN_vol", "vpvs_crossplot", "fracture_density_inv", "Kerogen vs Vp/Vs", "Kerogen Volume", "Vp/Vs"),
+        ("toc_clean", "phi_soft", "so", "TOC vs Soft Pore", "TOC", "Soft Pore Fraction"),
+    ]
+
+    # 第二步：单独绘制页岩特征类交会图，突出 TOC、干酪根、有机质相关软化与软孔响应。
+    return _scatter_panel(plot_data, specs, output_path, base_dir, crossplot_cfg, nrows=2, ncols=3)

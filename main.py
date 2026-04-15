@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from crossplotting import plot_crossplots
+from crossplotting import plot_crossplots, plot_shale_feature_crossplots
 from fracture_analysis_v2 import run_fracture_analysis
 from fracture_inversion import run_fracture_inversion
 from plotting import plot_velocity_depth_panel
@@ -60,8 +60,10 @@ def main() -> None:
 
     # 第七步：基于裂缝反演结果绘制页岩油工区解释所需的交会图。
     crossplot_path = None
+    shale_crossplot_path = None
     if fracture_inversion_result is not None:
         crossplot_path = plot_crossplots(fracture_inversion_result["result_frame"], config, base_dir)
+        shale_crossplot_path = plot_shale_feature_crossplots(fracture_inversion_result["result_frame"], config, base_dir)
 
     # 第八步：根据建模结果绘制速度与误差深度综合图。
     figure_path = plot_velocity_depth_panel(modeled, config, base_dir)
@@ -96,6 +98,8 @@ def main() -> None:
             print(f"  {key}: {value}")
     if crossplot_path is not None:
         print(f"Crossplot panel: {crossplot_path}")
+    if shale_crossplot_path is not None:
+        print(f"Shale feature crossplot panel: {shale_crossplot_path}")
     if figure_path is not None:
         print(f"Figure file: {figure_path}")
     print("Preprocess summary:")

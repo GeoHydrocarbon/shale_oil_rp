@@ -1,6 +1,6 @@
 ﻿paths: # 文件路径配置
   rockphypy_repo: rockphypy-main # rockphypy 源码目录
-  input_file: rockphypy-main/data/Jorlin/NY1_4HF_岩石物理.xlsx # 原始输入数据文件
+  input_file: rockphypy-main/data/Jorlin/NY1-4HF_岩石物理_二维核磁数据.xlsx # 原始输入数据文件
   output_preprocessed: rockphypy-main/data/Jorlin/jorlin_preprocessed.xlsx # 前处理结果输出文件
   output_modeled: rockphypy-main/data/Jorlin/jorlin_modeled.xlsx # 岩石物理建模结果输出文件
   sheet_name: Sheet1 # Excel 工作表名称
@@ -71,22 +71,22 @@ preprocess: # 前处理开关
 model: # 岩石物理模型配置
   matrix_mixing: hill # 基质混合方式，可选 voigt/reuss/hill
   dry_frame_model: DEM # 干岩骨架模型，可选 DEM/cripor
-  critical_porosity: 0.20 # 临界孔隙度，仅在 cripor 模型中直接使用
+  critical_porosity: 0.25 # 临界孔隙度，仅在 cripor 模型中直接使用
   pore_aspect_ratio: 0.08 # 单孔隙 DEM 的默认孔隙纵横比，双孔模式下仅作备用
   fluid_mixing: reuss # 油水混合流体体积模量混合方式，当前支持 reuss
   use_fracture: false # 基线建模模块暂不直接使用，裂缝正演由 fracture 配置块单独控制
 
 pore_system: # 孔隙体系参数
   model: dual_pore # 孔隙体系模型，当前为硬孔+软孔双孔隙
-  soft_pore_fraction: 0.25  # 总孔隙度中软孔占比
+  soft_pore_fraction: 0.15 # 总孔隙度中软孔占比
   alpha_hard: 0.15 # 硬孔纵横比
-  alpha_soft: 0.02 # 软孔纵横比
+  alpha_soft: 0.01 # 软孔纵横比
   dem_order: hard_then_soft # DEM 加孔顺序，可选 hard_then_soft/soft_then_hard
 
 fluid: # 孔隙流体参数
   system: oil_water # 流体体系，当前为油水两相
-  pressure_mpa: 35.0 # 地层压力，MPa
-  temperature_c: 110.0 # 地层温度，摄氏度
+  pressure_mpa: 60 # 地层压力，MPa
+  temperature_c: 140.0 # 地层温度，摄氏度
   brine_salinity_ppm: 80000.0 # 地层水矿化度，ppm
   oil_density_gcc: 0.82 # 地层原油密度，g/cm3
   gas_gravity: 0.80 # 天然气相对密度，用于活油情况
@@ -100,8 +100,8 @@ fracture: # 裂缝正演与敏感性分析配置
   host_domain: saturated_background # 裂缝加载的背景介质，可选 saturated_background/dry_background
   fill: fluid # 裂缝充填类型，可选 fluid/dry
   aspect_ratio: 0.01 # 裂缝纵横比
-  density: 0.01 # 基准裂缝密度，用于输出一版参考结果
-  dip_angle_deg: 60.0 # 基准裂缝倾角，度
+  density: 0.1 # 基准裂缝密度，用于输出一版参考结果
+  dip_angle_deg: 45.0 # 基准裂缝倾角，度
   log_incidence_deg: 0.0 # 测井传播方向相对 TI 轴的传播角，0 表示近似垂直传播
   output_reference: rockphypy-main/data/Jorlin/jorlin_fracture_reference.xlsx # 基准裂缝场景结果表
   output_table: rockphypy-main/data/Jorlin/fracture_sensitivity.xlsx # 裂缝敏感性分析结果表
@@ -166,6 +166,7 @@ crossplots: # 交会图绘图配置
   elastic_source: fracture_inv # 交会图采用的弹性参数来源，可选 fracture_inv/log
   output_dir: rockphypy-main/data/Jorlin/figures/crossplots # 交会图输出目录
   panel_filename: shale_oil_crossplots_panel.png # 推荐 8 张交会图总面板文件名
+  shale_feature_panel_filename: shale_feature_crossplots_panel.png # 页岩特征类交会图总面板文件名
   dpi: 300 # 交会图分辨率
   figure_width: 28 # 交会图总面板宽度，英寸
   figure_height: 12 # 交会图总面板高度，英寸
@@ -202,7 +203,7 @@ sensitivity: # 参数敏感性分析配置
     - rho_rmse # 密度均方根误差
   parameters: # 待扫描的参数及取值列表
     kerogen.carbon_fraction: [0.65, 0.70, 0.75, 0.80, 0.85] # 干酪根碳质量分数扫描
-    kerogen.K: [3.0, 5.0, 7.0, 9.0] # 干酪根体积模量扫描
+    kerogen.K: [1.0, 3.0, 5.0, 7.0] # 干酪根体积模量扫描
     kerogen.G: [1.5, 3.0, 4.5, 6.0] # 干酪根剪切模量扫描
     pore_system.soft_pore_fraction: [0.15, 0.25, 0.35, 0.45, 0.55] # 软孔占比扫描
     pore_system.alpha_soft: [0.005, 0.01, 0.02, 0.04] # 软孔纵横比扫描
